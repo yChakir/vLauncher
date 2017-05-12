@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose vLauncher.Tools | Templates
- * and open the template in the editor.
- */
 package ma.ychakir.rz.vlauncher.Controllers;
 
 import javafx.application.Platform;
@@ -121,11 +116,12 @@ public class LauncherController {
                         Platform.runLater(() -> engine.executeScript("js.finished();"));
                         break;
                     case UPDATING:
-                        Platform.runLater(() -> engine.executeScript("js.totalCount = " + updateRunnable.getTotalCount() + ";" +
-                                "js.currentCount = " + updateRunnable.getCurrentCount() + ";" +
-                                "js.totalProgress(" + updateRunnable.getTotalProgress() + ");" +
-                                "js.currentName(\"" + updateRunnable.getCurrentName() + "\");" +
-                                "js.currentProgress(" + updateRunnable.getCurrentProgress() + ");"));
+                        Platform.runLater(() -> engine.executeScript(
+                                "js.updating(" + updateRunnable.getTotalCount() + ", " +
+                                        updateRunnable.getTotalProgress() + ", " +
+                                        "\"" + updateRunnable.getCurrentName() + "\", " +
+                                        updateRunnable.getCurrentCount() + "," +
+                                        updateRunnable.getCurrentProgress() + ");"));
                         break;
                 }
                 try {
