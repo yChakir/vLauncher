@@ -1,7 +1,6 @@
 package ma.ychakir.rz.vlauncher.Runnables;
 
 import com.google.gson.Gson;
-import ma.ychakir.rz.vlauncher.Launcher;
 import ma.ychakir.rz.vlauncher.Models.Pack;
 import ma.ychakir.rz.vlauncher.Models.RzFile;
 import ma.ychakir.rz.vlauncher.Utils.DataUtil;
@@ -22,12 +21,12 @@ import java.util.zip.ZipInputStream;
  * @author Yassine
  */
 public class UpdateRunnable implements Runnable {
-    private static final Logger logger = Launcher.getLogger();
+    private static final Logger logger = Logger.getLogger(UpdateRunnable.class);
     private final String currentDirectory = System.getProperty("user.dir");
     private final String version;
     private DataUtil dataUtil = null;
 
-    private Status status = Status.SEARSHING;
+    private Status status = Status.SEARCHING;
     private int totalCount;
     private int currentCount;
     private double totalProgress;
@@ -35,7 +34,7 @@ public class UpdateRunnable implements Runnable {
     private double currentProgress;
 
     public enum Status {
-        SEARSHING,
+        SEARCHING,
         ALREADY_UPDATED,
         UPDATING,
         CLEANING,
@@ -115,31 +114,29 @@ public class UpdateRunnable implements Runnable {
                         setCurrentCount(++current);
                         setTotalProgress(((double) current * 100.0d) / totalCount);
                     } else {
-                        logger.error("Failed to install new update " + rzFile.getName());
+                        logger.error("Failed to download/install new update " + rzFile.getName() + " (CRC32:" + rzFile.getSum() + ")");
                     }
                 }
             }
 
-            try {
-                if (dataUtil != null)
-                    //save data.000
+            if (dataUtil != null)
+                //save data.000
+                try {
                     dataUtil.save();
-
-                setStatus(Status.CLEANING);
-                //delete temp directory
-                FileUtils.deleteDirectory(new File(currentDirectory + "/Resource/temp"));
-
-                //clean resource directory
-                cleanResource(newPack);
-
-                setStatus(Status.FINISHED);
-                logger.debug("Update finished.");
-            } catch (IOException e) {
-                logger.error(e.getMessage());
-            }
+                } catch (IOException e) {
+                    logger.error(e.getMessage());
+                }
         } else {
             setStatus(Status.ALREADY_UPDATED);
         }
+
+        //clean resource directory
+        setStatus(Status.CLEANING);
+        cleanResource(newPack);
+
+        setStatus(totalCount > 0 ? Status.FINISHED : Status.ALREADY_UPDATED);
+        logger.debug("Update finished.");
+
     }
 
     private int getNewUpdates(Pack newPack, Map<String, List<RzFile>> updates) {
@@ -158,7 +155,7 @@ public class UpdateRunnable implements Runnable {
                             crc32 = dataUtil.getCRC32(rzFile.getName());
                             break;
                         case "<Resource>":
-                            file = new File(currentDirectory + "/Resource/" + rzFile.getName());
+                            file = new File(currentDirectory + File.separator + "Resource" + File.separator + rzFile.getName());
                             if (file.exists())
                                 crc32 = Long.toHexString(FileUtils.checksumCRC32(file)).toUpperCase();
                             break;
@@ -194,7 +191,7 @@ public class UpdateRunnable implements Runnable {
         RandomAccessFile raf = null;
         InputStream stream = null;
         try {
-            URL rzFileUrl = new URL(url + "/patches/" + rzFile.getZip() + ".zip");
+            URL rzFileUrl = new URL(url + File.separator + "patches" + File.separator + rzFile.getZip() + ".zip");
             logger.debug("Downloading: " + rzFile.getName() + " from: " + rzFileUrl);
             HttpURLConnection connection = (HttpURLConnection) rzFileUrl.openConnection();
             connection.connect();
@@ -213,7 +210,7 @@ public class UpdateRunnable implements Runnable {
                 setCurrentProgress(0);
             }
 
-            String tempPath = currentDirectory + "/Resource/temp";
+            String tempPath = currentDirectory + File.separator + "Resource" + File.separator + "temp";
             File temp = new File(tempPath);
 
             if (temp.exists() || temp.mkdirs()) {
@@ -250,23 +247,17 @@ public class UpdateRunnable implements Runnable {
     }
 
     private boolean install(String dest, RzFile rzFile) {
-        String source = currentDirectory + "/Resource/temp/" + rzFile.getZip();
+        String source = currentDirectory + File.separator + "Resource" + File.separator + "temp" + File.separator + rzFile.getZip();
         String destination;
         try {
             switch (dest) {
                 case "<Data>":
                     dataUtil = dataUtil == null ? new DataUtil(currentDirectory) : dataUtil;
-                    destination = currentDirectory + "/Resource/temp/" + rzFile.getName();
-                    if (unZip(source, destination)) {
-                        logger.debug("Patcing to client data: " + rzFile.getName());
-                        dataUtil.addFile(destination);
-                    } else {
-                        logger.error("Failed to extract file: source: " + source + " destination: " + dest);
-                        return false;
-                    }
+                    logger.debug("Patching to client data: " + rzFile.getName());
+                    dataUtil.addFromZip(source);
                     break;
                 case "<Resource>":
-                    destination = currentDirectory + "/Resource/" + rzFile.getName();
+                    destination = currentDirectory + File.separator + "Resource" + File.separator + rzFile.getName();
                     if (!unZip(source, destination)) {
                         logger.error("Failed to extract file: source: " + source + " destination: " + dest);
                         return false;
@@ -333,7 +324,7 @@ public class UpdateRunnable implements Runnable {
     }
 
     private void cleanResource(Pack newPack) {
-        String resourcePath = currentDirectory + "/Resource";
+        String resourcePath = currentDirectory + File.separator + "Resource";
         File resource = new File(resourcePath);
         String[] files = resource.list();
         List<RzFile> rzFiles = newPack.getPatches().get("<Resource>");

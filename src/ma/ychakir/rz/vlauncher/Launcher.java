@@ -18,10 +18,6 @@ public class Launcher extends Application {
     private static String[] arguments;
     private static final Logger logger = Logger.getLogger(Launcher.class);
 
-    public static Logger getLogger() {
-        return logger;
-    }
-
     public static void main(String[] args) {
         logger.debug("Launcher started with arguments: " + Arrays.toString(args));
         arguments = args;

@@ -4,16 +4,15 @@ import ma.ychakir.rz.vlauncher.Exceptions.DateCorruptedException;
 import ma.ychakir.rz.vlauncher.Models.DataIndex;
 import org.apache.commons.io.IOUtils;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 /**
  * @author Yassine
@@ -218,6 +217,66 @@ public class DataUtil {
         }
     }
 
+    public void addFromZip(String zipPath) throws IOException {
+        addFromZip(zipPath, clientPath);
+    }
+
+    public void addFromZip(String zipPath, String clientPath) throws IOException {
+        File zip = new File(zipPath);
+        File client = new File(clientPath);
+
+        if (zip.exists() && client.isDirectory() && (client.exists() || client.mkdirs())) {
+            ZipFile zipFile = new ZipFile(zipPath);
+            ZipEntry entry = zipFile.entries().nextElement();
+
+            String name = entry.getName();
+            String hash = EncodingUtil.isEncoded(name) ? name : EncodingUtil.encode(name);
+            name = EncodingUtil.decode(hash);
+
+            DataIndex index;
+            boolean bIsNew = !data.containsKey(name);
+            if (bIsNew) {
+                index = new DataIndex();
+                index.setHash(hash);
+                index.setName(name);
+                index.setId(getDataID(hash));
+            } else {
+                index = data.get(name);
+                data.remove(name, index);
+            }
+
+            File dataFile = new File(clientPath + File.separator + "data.00" + index.getId());
+
+            long size = entry.getSize();
+            if (bIsNew || size > index.getSize() || index.getOffset() > dataFile.length() - size) {
+                index.setOffset((int) dataFile.length());
+            }
+            index.setSize((int) size);
+
+            RandomAccessFile writer = new RandomAccessFile(dataFile, "rw");
+            BufferedInputStream reader = new BufferedInputStream(zipFile.getInputStream(entry));
+
+            writer.seek(index.getOffset());
+
+            byte[] buffer = new byte[1024];
+            int read;
+            if (isEncrypted(name)) {
+                for (int dataIndex = 0; (read = reader.read(buffer)) != -1; dataIndex += buffer.length) {
+                    writer.write(this.cipher(buffer, (byte) dataIndex), 0, read);
+                }
+            } else {
+                while ((read = reader.read(buffer)) != -1) {
+                    writer.write(buffer, 0, read);
+                }
+            }
+
+            IOUtils.closeQuietly(writer);
+            IOUtils.closeQuietly(zipFile);
+            IOUtils.closeQuietly(reader);
+            data.put(name, index);
+        }
+    }
+
     public String getCRC32(String name) throws IOException {
         String sum = null;
         String hash = EncodingUtil.isEncoded(name) ? name : EncodingUtil.encode(name);
@@ -255,5 +314,4 @@ public class DataUtil {
         }
         return sum;
     }
-
 }

@@ -4,7 +4,6 @@ import javafx.application.Platform;
 import javafx.scene.control.Alert;
 import javafx.scene.web.WebEngine;
 import javafx.stage.Stage;
-import ma.ychakir.rz.vlauncher.Launcher;
 import ma.ychakir.rz.vlauncher.Runnables.UpdateRunnable;
 import ma.ychakir.rz.vlauncher.Utils.GameStarter;
 import org.apache.log4j.Logger;
@@ -20,7 +19,7 @@ import java.util.concurrent.Executors;
  * @author Yassine
  */
 public class LauncherController {
-    private static final Logger logger = Launcher.getLogger();
+    private static final Logger logger = Logger.getLogger(LauncherController.class);
     private final Stage stage;
     private final WebEngine engine;
 
@@ -103,7 +102,7 @@ public class LauncherController {
             do {
                 status = updateRunnable.getStatus();
                 switch (status) {
-                    case SEARSHING:
+                    case SEARCHING:
                         Platform.runLater(() -> engine.executeScript("js.searching();"));
                         break;
                     case CLEANING:

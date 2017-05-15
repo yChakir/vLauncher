@@ -3,15 +3,12 @@ package ma.ychakir.rz.vlauncher.Controllers;
 import com.sun.javafx.webkit.Accessor;
 import javafx.application.Platform;
 import javafx.concurrent.Worker;
-import javafx.event.EventHandler;
 import javafx.scene.control.Alert;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.Region;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
-import ma.ychakir.rz.vlauncher.Launcher;
 import netscape.javascript.JSObject;
 import org.apache.log4j.Logger;
 
@@ -19,30 +16,23 @@ import org.apache.log4j.Logger;
  * @author Yassine
  */
 public class LauncherBrowser extends Region {
-    private static final Logger logger = Launcher.getLogger();
+    private static final Logger logger = Logger.getLogger(LauncherBrowser.class);
     final WebView browser = new WebView();
     final WebEngine engine = browser.getEngine();
     private double xOffset;
     private double yOffset;
 
     public LauncherBrowser(Stage stage, String url) {
-
         setBackground(Background.EMPTY);
         //mouse drag to move window
-        browser.setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent event) {
-                xOffset = stage.getX() - event.getScreenX();
-                yOffset = stage.getY() - event.getScreenY();
-            }
+        browser.setOnMousePressed(event -> {
+            xOffset = stage.getX() - event.getScreenX();
+            yOffset = stage.getY() - event.getScreenY();
         });
 
-        browser.setOnMouseDragged(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent event) {
-                stage.setX(event.getScreenX() + xOffset);
-                stage.setY(event.getScreenY() + yOffset);
-            }
+        browser.setOnMouseDragged(event -> {
+            stage.setX(event.getScreenX() + xOffset);
+            stage.setY(event.getScreenY() + yOffset);
         });
 
         //disable right clicks
@@ -54,7 +44,7 @@ public class LauncherBrowser extends Region {
         final LauncherController ja = new LauncherController(stage, engine);
         engine.getLoadWorker().stateProperty().addListener((e, o, n) -> {
             if (n == Worker.State.SUCCEEDED) {
-                logger.debug("Loading succeded");
+                logger.debug("Loading succeeded");
                 ((JSObject) engine.executeScript("window")).setMember("launcher", ja);
                 getChildren().add(browser);
                 Accessor.getPageFor(browser.getEngine()).setBackgroundColor(0);
