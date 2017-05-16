@@ -1,6 +1,7 @@
 package ma.ychakir.rz.vlauncher;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
@@ -21,13 +22,19 @@ public class Launcher extends Application {
     public static void main(String[] args) {
         logger.debug("Launcher started with arguments: " + Arrays.toString(args));
         arguments = args;
-        launch(args);
+        if (args.length >= 4)
+            launch(args);
+        else {
+            logger.error("Invalid arguments: " + Arrays.toString(args));
+            Platform.exit();
+            System.exit(0);
+        }
+
     }
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        Scene scene = new Scene(new LauncherBrowser(primaryStage, arguments[0]));
-        primaryStage.setTitle("vLauncher");
+        Scene scene = new Scene(new LauncherBrowser(primaryStage, arguments));
         scene.setFill(Color.TRANSPARENT);
         primaryStage.initStyle(StageStyle.TRANSPARENT);
         primaryStage.setScene(scene);

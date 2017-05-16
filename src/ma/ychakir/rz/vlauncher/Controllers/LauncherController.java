@@ -2,6 +2,7 @@ package ma.ychakir.rz.vlauncher.Controllers;
 
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
+import javafx.scene.image.Image;
 import javafx.scene.web.WebEngine;
 import javafx.stage.Stage;
 import ma.ychakir.rz.vlauncher.Runnables.UpdateRunnable;
@@ -60,7 +61,7 @@ public class LauncherController {
      */
     public void start(String sframe, String args) {
         try {
-            logger.debug("Statting the game with arguments: " + sframe + " " + args);
+            logger.debug("Starting the game with arguments: " + sframe + " " + args);
             if (new GameStarter(sframe, args).start())
                 engine.executeScript("js.gameStarted();");
         } catch (Exception ex) {
@@ -71,6 +72,21 @@ public class LauncherController {
             alert.setContentText(ex.getMessage());
             alert.showAndWait();
         }
+    }
+
+    /**
+     * Set launcher title
+     */
+    public void setTitle(String title) {
+        stage.setTitle(title);
+    }
+
+    /**
+     * Set launcher title
+     */
+    public void setIcon(String icon) {
+        stage.getIcons().clear();
+        stage.getIcons().add(new Image(icon));
     }
 
     /**

@@ -96,7 +96,15 @@ public class UpdateRunnable implements Runnable {
     @Override
     public void run() {
         logger.debug("Update worker started.");
-        Pack newPack = new Gson().fromJson(version, Pack.class);
+        Pack newPack;
+
+        try {
+            newPack = new Gson().fromJson(version, Pack.class);
+        } catch (Exception e) {
+            logger.fatal("Failed to parse version text: " + version);
+            setStatus(Status.ALREADY_UPDATED);
+            return;
+        }
         Map<String, List<RzFile>> updates = new LinkedHashMap<>();
         final String url = newPack.getUrl();
         final int totalCount = getNewUpdates(newPack, updates);
@@ -148,27 +156,25 @@ public class UpdateRunnable implements Runnable {
                 try {
                     logger.debug("Check if exists: " + rzFile.getName());
                     String crc32 = null;
-                    File file;
-                    switch (s) {
-                        case "<Data>":
-                            dataUtil = dataUtil == null ? new DataUtil(currentDirectory) : dataUtil;
-                            crc32 = dataUtil.getCRC32(rzFile.getName());
-                            break;
-                        case "<Resource>":
-                            file = new File(currentDirectory + File.separator + "Resource" + File.separator + rzFile.getName());
-                            if (file.exists())
-                                crc32 = Long.toHexString(FileUtils.checksumCRC32(file)).toUpperCase();
-                            break;
-                        case "<Current>":
-                            file = new File(currentDirectory + File.separator + rzFile.getName());
-                            if (file.exists())
-                                crc32 = Long.toHexString(FileUtils.checksumCRC32(file)).toUpperCase();
-                            break;
-                        default:
-                            file = new File(currentDirectory + File.separator + s + File.separator + rzFile.getName());
-                            if (file.exists())
-                                crc32 = Long.toHexString(FileUtils.checksumCRC32(file)).toUpperCase();
-                            break;
+
+                    if (s.equals("<Data>")) {
+                        dataUtil = dataUtil == null ? new DataUtil(currentDirectory) : dataUtil;
+                        crc32 = dataUtil.getCRC32(rzFile.getName());
+                    } else {
+                        File file;
+                        switch (s) {
+                            case "<Resource>":
+                                file = new File(currentDirectory + File.separator + "Resource" + File.separator + rzFile.getName());
+                                break;
+                            case "<Current>":
+                                file = new File(currentDirectory + File.separator + rzFile.getName());
+                                break;
+                            default:
+                                file = new File(currentDirectory + File.separator + s + File.separator + rzFile.getName());
+                                break;
+                        }
+                        if (file.exists())
+                            crc32 = Long.toHexString(FileUtils.checksumCRC32(file)).toUpperCase();
                     }
 
                     if (crc32 == null || !crc32.equals(rzFile.getSum())) {
@@ -248,42 +254,35 @@ public class UpdateRunnable implements Runnable {
 
     private boolean install(String dest, RzFile rzFile) {
         String source = currentDirectory + File.separator + "Resource" + File.separator + "temp" + File.separator + rzFile.getZip();
-        String destination;
-        try {
+
+        if (dest.equals("<Data>")) {
+            try {
+                dataUtil = dataUtil == null ? new DataUtil(currentDirectory) : dataUtil;
+                dataUtil.addFromZip(source);
+            } catch (IOException e) {
+                logger.error(e.getMessage());
+                return false;
+            }
+        } else {
+            String destination;
             switch (dest) {
-                case "<Data>":
-                    dataUtil = dataUtil == null ? new DataUtil(currentDirectory) : dataUtil;
-                    logger.debug("Patching to client data: " + rzFile.getName());
-                    dataUtil.addFromZip(source);
-                    break;
                 case "<Resource>":
                     destination = currentDirectory + File.separator + "Resource" + File.separator + rzFile.getName();
-                    if (!unZip(source, destination)) {
-                        logger.error("Failed to extract file: source: " + source + " destination: " + dest);
-                        return false;
-                    }
                     break;
                 case "<Current>":
                     destination = currentDirectory + File.separator + rzFile.getName();
-                    if (!unZip(source, destination)) {
-                        logger.error("Failed to extract file: source: " + source + " destination: " + dest);
-                        return false;
-                    }
                     break;
                 default:
                     destination = currentDirectory + File.separator + dest + File.separator + rzFile.getName();
-                    if (!unZip(source, destination)) {
-                        logger.error("Failed to extract file: source: " + source + " destination: " + dest);
-                        return false;
-                    }
                     break;
             }
-            return true;
-        } catch (IOException e) {
-            logger.error(e.getMessage());
-            return false;
+            if (!unZip(source, destination)) {
+                logger.error("Failed to extract file: source: " + source + " destination: " + dest);
+                return false;
+            }
         }
 
+        return true;
     }
 
     private boolean unZip(String source, String dest) {
