@@ -5,8 +5,11 @@ import javafx.application.Platform;
 import javafx.concurrent.Worker;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.Label;
+import javafx.scene.control.ProgressIndicator;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
@@ -28,7 +31,14 @@ public class LauncherBrowser extends Region {
     private double yOffset;
 
     public LauncherBrowser(Stage stage, String[] args) {
-        setBackground(Background.EMPTY);
+        VBox box = new VBox();
+        Label label = new Label("Loading...");
+        ProgressIndicator indicator = new ProgressIndicator();
+
+        box.getChildren().add(label);
+        box.getChildren().add(indicator);
+        getChildren().add(box);
+
         //mouse drag to move window
         browser.setOnMousePressed(event -> {
             xOffset = stage.getX() - event.getScreenX();
@@ -51,6 +61,8 @@ public class LauncherBrowser extends Region {
             if (n == Worker.State.SUCCEEDED) {
                 logger.debug("Loading succeeded");
                 ((JSObject) engine.executeScript("window")).setMember("launcher", js);
+                getChildren().clear();
+                setBackground(Background.EMPTY);
                 getChildren().add(browser);
                 Accessor.getPageFor(browser.getEngine()).setBackgroundColor(0);
                 engine.executeScript("js.init();");
